@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -10,37 +10,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Instalar unzip
-        run: sudo apt-get update && sudo apt-get install -y unzip
-
-      - name: Descompactar projeto
-        run: |
-          unzip -o GameBooster-Android-Project.zip -d project
-
-      - name: Encontrar gradlew
-        run: |
-          find project -name gradlew
-
-      - uses: actions/setup-java@v4
+      - name: Configurar Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
 
-      - name: Dar permissão ao Gradle
-        run: chmod +x $(find project -name gradlew | head -1)
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Compilar APK
+      - name: Mostrar estrutura
         run: |
-          cd $(dirname $(find project -name gradlew | head -1))
-          ./gradlew assembleDebug
+          pwd
+          ls -la
+          find . -maxdepth 3 -type f
 
-      - name: Encontrar APK
-        run: find project -name "*.apk"
+      - name: Gerar Wrapper
+        run: |
+          if [ ! -f gradlew ]; then
+            gradle wrapper
+          fi
 
-      - name: Publicar APK
+      - name: Dar permissão
+        run: chmod +x gradlew
+
+      - name: Build Debug
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Localizar APK
+        run: find . -name "*.apk"
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: APK
-          path: project/**/app/build/outputs/apk/debug/*.apk
+          name: GameBooster-APK
+          path: app/build/outputs/apk/debug/*.apk
